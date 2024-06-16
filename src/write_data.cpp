@@ -51,6 +51,8 @@ int main(int argc, char** argv){
 
     close(fd);
 
+    munmap(out, fsize);          // これを呼ばないとリークする
+
     sw.stop();
     std::cout << "writing file has taken " << sw.getResult() * 1000 <<  " ms" << std::endl;
     

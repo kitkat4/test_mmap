@@ -35,6 +35,8 @@ int main(int argc, char** argv){
 
     memcpy(data.data(), in, fsize);
 
+    munmap(in, fsize);          // これを呼ばないとリークする
+
     close(fd);
 
     sw.stop();
