@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <cstring>
+#include <errno.h>
 
 #include <iostream>
 #include <vector>
@@ -22,22 +23,38 @@ int main(int argc, char** argv){
     my_utils_kk4::StopWatch sw;
     sw.start();
 
-    const int fd = open(argv[1], O_RDONLY);
-
-    if(fd == -1){
-        std::cerr << "file open error" << std::endl;
+    errno = 0;
+    if(access(argv[1], F_OK) != 0){
+        std::cerr << "Error (access): " << strerror(errno) << std::endl;
         return 1;
     }
 
-    
+    errno = 0;
+    const int fd = open(argv[1], O_RDONLY);
 
+    if(fd == -1){
+        std::cerr << "Error (open): " << strerror(errno) << std::endl;
+        return 1;
+    }
+
+    errno = 0;
     char * in = (char*)mmap(nullptr, fsize, PROT_READ, MAP_SHARED, fd, 0);
+    if(in == MAP_FAILED){
+        std::cerr << "Error (mmap): " << strerror(errno) << std::endl;
+        return 1;
+    }
 
     memcpy(data.data(), in, fsize);
 
-    munmap(in, fsize);          // これを呼ばないとリークする
+    errno = 0;
+    if(munmap(in, fsize) == -1){          // これを呼ばないとリークする
+        std::cerr << "Error (munmap): " << strerror(errno) << std::endl;
+    }
 
-    close(fd);
+    errno = 0;
+    if(close(fd) == -1){
+        std::cerr << "Error (close): " << strerror(errno) << std::endl;
+    }
 
     sw.stop();
     std::cerr << "reading file has taken " << sw.getResult() * 1000 <<  " ms" << std::endl;

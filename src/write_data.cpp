@@ -2,8 +2,10 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <cstring>
+
 
 #include <iostream>
 #include <vector>
@@ -30,29 +32,42 @@ int main(int argc, char** argv){
     // - O_WRONLYだとmemcpyでSegmentation faultになる
     // - ファイルの新規作成を許容するためにO_CREATが必要
     // - O_CREAT指定時は、作成するファイルのパーミッションを第3引数に指定が必要
+    errno = 0;
     const int fd = open(argv[1], O_RDWR | O_CREAT,
                         S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 
     if(fd == -1){
-        std::cerr << "file open error" << std::endl;
+        std::cerr << "Error (open): " << strerror(errno) << std::endl;
         return 1;
     }
-    
+
+    errno = 0;
     if(ftruncate(fd, fsize) == -1){
-        std::cerr << "ftruncate fail" << std::endl;
+        std::cerr << "Error (ftruncate): " << strerror(errno) << std::endl;
         return 1;
     }
 
-    
-
+    errno = 0;
     char * out = (char*)mmap(nullptr, fsize, PROT_WRITE, MAP_SHARED, fd, 0);
+    if(out == MAP_FAILED){
+        std::cerr << "Error (mmap): " << strerror(errno) << std::endl;
+        return 1;
+    }
+
+    // std::string buf;
+    // std::getline(std::cin, buf);
 
     std::memcpy(out, &(data[0]), fsize);
 
-    close(fd);
+    errno = 0;
+    if(close(fd) == -1){
+        std::cerr << "Error (close): " << strerror(errno) << std::endl;
+    }
 
-    munmap(out, fsize);          // これを呼ばないとリークする
-
+    errno = 0;
+    if(munmap(out, fsize) == -1){          // これを呼ばないとリークする
+        std::cerr << "Error (munmap): " << strerror(errno) << std::endl;
+    }
     sw.stop();
     std::cout << "writing file has taken " << sw.getResult() * 1000 <<  " ms" << std::endl;
     
