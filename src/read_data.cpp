@@ -23,8 +23,9 @@ int main(int argc, char** argv){
     my_utils_kk4::StopWatch sw;
     sw.start();
 
+    // ファイルが存在し、かつRead権限があることをチェック
     errno = 0;
-    if(access(argv[1], F_OK) != 0){
+    if(access(argv[1], R_OK) != 0){
         std::cerr << "Error (access): " << strerror(errno) << std::endl;
         return 1;
     }

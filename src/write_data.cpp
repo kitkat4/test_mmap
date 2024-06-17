@@ -28,13 +28,16 @@ int main(int argc, char** argv){
 
     my_utils_kk4::StopWatch sw;
     sw.start();
-
+    
     // - O_WRONLYだとmemcpyでSegmentation faultになる
     // - ファイルの新規作成を許容するためにO_CREATが必要
     // - O_CREAT指定時は、作成するファイルのパーミッションを第3引数に指定が必要
+    // - 最初はWrite権限のみにしておく. Readはあとでつける（Write中に他のプロセスがReadしないなら今つけてもいい）
+    // - O_EXCL は、このopenでファイルの新規作成にならない場合にエラーにする。
     errno = 0;
-    const int fd = open(argv[1], O_RDWR | O_CREAT,
-                        S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+    const int fd = open(argv[1], O_RDWR | O_CREAT | O_EXCL, S_IWUSR);
+    // const int fd = open(argv[1], O_RDWR | O_CREAT,
+    //                     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 
     if(fd == -1){
         std::cerr << "Error (open): " << strerror(errno) << std::endl;
@@ -68,6 +71,14 @@ int main(int argc, char** argv){
     if(munmap(out, fsize) == -1){          // これを呼ばないとリークする
         std::cerr << "Error (munmap): " << strerror(errno) << std::endl;
     }
+
+    // Writeが終わってからRead可能にする
+    // これで「まだWriteが終わっていないのにReadされる」事態は防げる。
+    errno = 0;
+    if(chmod(argv[1], S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH) == -1){
+        std::cerr << "Error (chmod): " << strerror(errno) << std::endl;
+    }
+    
     sw.stop();
     std::cout << "writing file has taken " << sw.getResult() * 1000 <<  " ms" << std::endl;
     
