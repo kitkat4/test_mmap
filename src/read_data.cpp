@@ -50,11 +50,13 @@ int main(int argc, char** argv){
     errno = 0;
     if(munmap(in, fsize) == -1){          // これを呼ばないとリークする
         std::cerr << "Error (munmap): " << strerror(errno) << std::endl;
+        return 1;
     }
 
     errno = 0;
     if(close(fd) == -1){
         std::cerr << "Error (close): " << strerror(errno) << std::endl;
+        return 1;
     }
 
     sw.stop();
